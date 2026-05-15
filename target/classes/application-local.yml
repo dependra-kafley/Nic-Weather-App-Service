@@ -1,0 +1,26 @@
+# Local / demo: IMD mock data (no external HTTP). Ideal for UI and integration testing.
+spring:
+  thymeleaf:
+    cache: false
+
+weather:
+  imd:
+    nowcast:
+      mock: true
+    rainfall:
+      mock: true
+    district-warning:
+      mock: true
+    city:
+      mock: true
+    aws-data:
+      mock: true
+    scheduler:
+      enabled: true
+      # Faster refresh in local mode (optional); comment out to use 3h / daily only
+      nowcast-cron: "0 */15 * * * *"
+      daily-cron: "0 */30 * * * *"
+
+logging:
+  level:
+    com.example.weathermap: DEBUG

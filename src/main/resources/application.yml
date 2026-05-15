@@ -1,37 +1,112 @@
 spring:
   application:
-    name: weather-map-app
+    name: nic-weather-app-service
+  # Default to "local" for mock IMD data; set SPRING_PROFILES_ACTIVE=prod for live APIs.
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+    group:
+      mock:
+        - local
+  thymeleaf:
+    cache: true
   datasource:
-    url: ${DB_URL:jdbc:h2:mem:weatherdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH}
-    username: ${DB_USERNAME:sa}
-    password: ${DB_PASSWORD:}
-    driver-class-name: ${DB_DRIVER:org.h2.Driver}
+    url: jdbc:h2:file:${WEATHER_DB_PATH:./data/weather-db};DB_CLOSE_ON_EXIT=FALSE;AUTO_RECONNECT=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
   jpa:
     hibernate:
       ddl-auto: update
     open-in-view: false
     properties:
       hibernate:
-        format_sql: true
-  h2:
-    console:
-      enabled: true
+        jdbc:
+          time_zone: UTC
 
 server:
   port: ${SERVER_PORT:8080}
+  compression:
+    enabled: true
+    mime-types: text/html,text/css,application/javascript,application/json,image/svg+xml
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when_authorized
 
 weather:
-  scheduler:
-    cron: ${WEATHER_SYNC_CRON:0 0 1 * * *}
-  api:
-    auth-url: ${WEATHER_AUTH_URL:https://example.com/api/auth/token}
-    weather-url: ${WEATHER_DATA_URL:https://example.com/api/weather/districts}
-    client-id: ${WEATHER_CLIENT_ID:demo-client}
-    client-secret: ${WEATHER_CLIENT_SECRET:demo-secret}
-
-app:
-  seed-demo-data: ${APP_SEED_DEMO_DATA:true}
+  imd:
+    connect-timeout: ${IMD_CONNECT_TIMEOUT:15s}
+    read-timeout: ${IMD_READ_TIMEOUT:45s}
+    meghalaya-district-obj-ids:
+      - "1"
+      - "2"
+      - "3"
+      - "4"
+      - "5"
+      - "6"
+      - "7"
+      - "575"
+      - "672"
+      - "673"
+      - "674"
+    nowcast:
+      base-url: https://mausam.imd.gov.in/api/nowcast_district_api.php
+      mock: false
+    rainfall:
+      base-url: https://mausam.imd.gov.in/api/districtwise_rainfall_api.php
+      mock: false
+    district-warning:
+      base-url: https://mausam.imd.gov.in/api/warnings_district_api.php
+      mock: false
+    city:
+      base-url: https://city.imd.gov.in/api/cityweather.php
+      mock: false
+      station-ids:
+        - "42516"
+        - "99489"
+    aws-data:
+      base-url: https://api.imd.gov.in/api/v1/aws_data
+      mock: false
+      station-ids:
+        - "A0A2556C"
+        - "A0A260F6"
+        - "MEAMJ000"
+        - "MEMWY000"
+        - "A0A28304"
+        - "A0A27380"
+        - "MEMWK000"
+        - "A0A27D52"
+        - "A0A25BBE"
+        - "MERES000"
+        - "55E438E2"
+        - "55C18D42"
+        - "55E41E0E"
+        - "MELAN000"
+        - "MEUMT000"
+        - "MEMWR000"
+        - "55E440A0"
+        - "MENEV000"
+        - "55E453D6"
+        - "55E44E72"
+    scheduler:
+      enabled: true
+      # Every 3 hours (00:00, 03:00, 06:00, …)
+      nowcast-cron: ${IMD_NOWCAST_CRON:0 0 0/3 * * *}
+      # Daily at 01:00
+      daily-cron: ${IMD_DAILY_CRON:0 0 1 * * *}
+      daily-retry-interval-ms: ${IMD_DAILY_RETRY_MS:300000}
+      daily-max-retries: ${IMD_DAILY_MAX_RETRIES:12}
 
 logging:
   level:
+    root: INFO
     com.example.weathermap: INFO
