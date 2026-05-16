@@ -1,5 +1,6 @@
 package com.example.weathermap.service.imd;
 
+import com.example.weathermap.dto.ImdAwsDataResponse;
 import com.example.weathermap.dto.ImdCityWeatherResponse;
 import com.example.weathermap.dto.ImdDistrictRainfallResponse;
 import com.example.weathermap.dto.ImdDistrictWarningResponse;
@@ -357,6 +358,75 @@ public final class ImdMockResponses {
               "Day_7_Forecast": "Generally cloudy sky with moderate rain"
             }
             """;
+
+    public static ImdAwsDataResponse awsStation(String stationId, ObjectMapper mapper) {
+        LocalDate today = LocalDate.now();
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("ID", stationId);
+        m.put("STATION", awsStationDisplayName(stationId));
+        m.put("DISTRICT", awsDistrictUnderscore(stationId));
+        m.put("STATE", "MEGHALAYA");
+        m.put("DATE", today.toString());
+        m.put("TIME", "01:30:00");
+        m.put("CURR_TEMP", "22.0");
+        m.put("MIN_TEMP", "20.0");
+        m.put("MAX_TEMP", "28.0");
+        m.put("WIND_DIRECTION", "110");
+        m.put("WIND_SPEED", 3.7);
+        m.put("MSLP", "1003.1");
+        m.put("RH", "85");
+        m.put("WEATHER_CODE", "65");
+        m.put("NEBULOSITY", "0");
+        m.put("Feel Like", "22.0");
+        m.put("WEATHER_ICON", 308);
+        m.put("WEATHER_MESSAGE", "Light to moderate rain");
+        m.put("BACKGROUND", "rain.png");
+        m.put("BACKGROUND_URL", "https://mausam.imd.gov.in/img/bg/rain.png");
+        return mapper.convertValue(m, ImdAwsDataResponse.class);
+    }
+
+    private static String awsStationDisplayName(String id) {
+        return switch (id) {
+            case "55C18D42" -> "RONGARA";
+            case "55E41E0E" -> "SOHRA (CHERRAPUNJEE)";
+            case "55E438E2" -> "MINENG";
+            case "55E440A0" -> "BYRNIHAT";
+            case "55E44E72" -> "RESUBELPARA";
+            case "55E453D6" -> "MAIRANG";
+            case "A0A2556C" -> "WILLIAMNAGAR";
+            case "A0A25BBE" -> "BAGHMARA";
+            case "A0A260F6" -> "TURA";
+            case "A0A27380" -> "SHILLONG";
+            case "A0A27D52" -> "NONGSTOIN";
+            case "A0A28304" -> "JOWAI";
+            case "MEAMJ000" -> "AMPATI";
+            case "MELAN000" -> "LABAN";
+            case "MEMWK000" -> "MAWKYRWAT";
+            case "MEMWR000" -> "MAWRYNGKNENG";
+            case "MEMWY000" -> "MAWSYNRAM";
+            case "MENEV000" -> "NEHU";
+            case "MERES000" -> "RESUBELPARA";
+            case "MEUMT000" -> "UMTREWDAM";
+            default -> "STATION " + id;
+        };
+    }
+
+    private static String awsDistrictUnderscore(String id) {
+        return switch (id) {
+            case "MEAMJ000" -> "SOUTH_WEST_GARO_HILLS";
+            case "A0A2556C" -> "EAST_GARO_HILLS";
+            case "A0A25BBE", "A0A260F6", "MERES000", "55E44E72" -> "WEST_GARO_HILLS";
+            case "A0A27380", "MENEV000", "MELAN000" -> "EAST_KHASI_HILLS";
+            case "A0A27D52" -> "WEST_KHASI_HILLS";
+            case "A0A28304", "MEMWK000" -> "WEST_JAINTIA_HILLS";
+            case "MEMWY000", "55E41E0E" -> "EAST_KHASI_HILLS";
+            case "MEMWR000" -> "EAST_KHASI_HILLS";
+            case "55E438E2", "55C18D42", "55E453D6" -> "SOUTH_GARO_HILLS";
+            case "55E440A0" -> "RI_BHOI";
+            case "MEUMT000" -> "RI_BHOI";
+            default -> "MEGHALAYA";
+        };
+    }
 
     private static final String SHILLONG_JSON = """
             {

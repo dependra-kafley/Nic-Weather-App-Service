@@ -428,3 +428,64 @@ body {
     color: #475569;
     line-height: 1.4;
 }
+
+/* AWS / ARG station observation tables */
+.aws-legends {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+}
+
+.aws-legend-org strong {
+    color: #b91c1c;
+}
+
+.aws-legend-aws strong {
+    color: #1d4ed8;
+}
+
+.aws-legend-arg strong {
+    color: #15803d;
+}
+
+.aws-table-title.aws-type-org {
+    color: #b91c1c;
+    border-left: 4px solid #b91c1c;
+    padding-left: 0.5rem;
+}
+
+.aws-table-title.aws-type-aws {
+    color: #1d4ed8;
+    border-left: 4px solid #1d4ed8;
+    padding-left: 0.5rem;
+}
+
+.aws-table-title.aws-type-arg {
+    color: #15803d;
+    border-left: 4px solid #15803d;
+    padding-left: 0.5rem;
+}
+
+.aws-type-cell.aws-type-org {
+    color: #b91c1c;
+    font-weight: 600;
+}
+
+.aws-type-cell.aws-type-aws {
+    color: #1d4ed8;
+    font-weight: 600;
+}
+
+.aws-type-cell.aws-type-arg {
+    color: #15803d;
+    font-weight: 600;
+}
+
+.aws-station-table thead th {
+    white-space: nowrap;
+    font-size: 0.72rem;
+}
+
+.aws-observations-panel {
+    border: 1px solid #e2e8f0;
+}

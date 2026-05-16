@@ -2,7 +2,7 @@ const districtDetailCard = document.getElementById("district-detail-card");
 const districtDetailTitle = document.getElementById("district-detail-title");
 const mapPlotTitle = document.getElementById("map-plot-title");
 const nowcastLastUpdatedEl = document.getElementById("nowcast-last-updated");
-const plotModeButtons = document.querySelectorAll(".plot-mode-btn");
+const plotModeButtons = document.querySelectorAll(".plot-mode-btn[data-plot-mode]");
 const districtMapContainer = document.getElementById("district-map-container");
 
 const NO_DATA_FILL = "#cfe2ff";
@@ -413,6 +413,9 @@ const setPlotMode = (mode) => {
 const wirePlotModeMenu = () => {
     plotModeButtons.forEach((button) => {
         button.addEventListener("click", () => {
+            document.getElementById("dashboard-map-view")?.classList.remove("d-none");
+            document.getElementById("dashboard-aws-view")?.classList.add("d-none");
+            document.getElementById("rainfall-observed-btn")?.classList.remove("active");
             setPlotMode(button.dataset.plotMode);
             document.getElementById("map-panel")?.scrollIntoView({behavior: "smooth", block: "start"});
         });

@@ -24,6 +24,15 @@ class WeatherMapApplicationTests {
     }
 
     @Test
+    void awsObservationsEndpointReturnsGroupedArrays() throws Exception {
+        mockMvc.perform(get("/api/weather/aws-observations"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.org").isArray())
+                .andExpect(jsonPath("$.aws").isArray())
+                .andExpect(jsonPath("$.arg").isArray());
+    }
+
+    @Test
     void nowcastMapEndpointReturnsDistricts() throws Exception {
         mockMvc.perform(get("/api/weather/nowcast/map"))
                 .andExpect(status().isOk())

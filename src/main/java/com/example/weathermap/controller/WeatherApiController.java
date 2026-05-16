@@ -3,6 +3,7 @@ package com.example.weathermap.controller;
 import com.example.weathermap.config.ImdSchedulerProperties;
 import com.example.weathermap.dto.CityWeatherPanelItemDto;
 import com.example.weathermap.dto.DistrictWarningMapPointResponse;
+import com.example.weathermap.dto.ImdAwsDataGroupedResponse;
 import com.example.weathermap.dto.ImdSyncStatusResponse;
 import com.example.weathermap.dto.NowcastMapPointResponse;
 import com.example.weathermap.dto.RainfallMapPointResponse;
@@ -75,5 +76,10 @@ public class WeatherApiController {
     @GetMapping("/cities")
     public List<CityWeatherPanelItemDto> getCityWeatherPanels() {
         return cityWeatherPanelService.loadConfiguredStations();
+    }
+
+    @GetMapping("/aws-observations")
+    public ImdAwsDataGroupedResponse getAwsObservations() {
+        return imdWeatherDataCache.getAwsData();
     }
 }

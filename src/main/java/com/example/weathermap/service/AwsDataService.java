@@ -11,16 +11,34 @@ public class AwsDataService {
 
     private final AwsDataApiClient apiClient;
 
-    // Hardcoded Categories based on the Requirement mapping
+    /**
+     * Meghalaya IWS-style grouping (ORG left table, AWS blue, ARG green).
+     * Two Resubelpara IDs: MERES000 → AWS, 55E44E72 → ARG per IWS layout.
+     */
     private static final List<String> ORG_IDS = List.of("A0A2556C", "A0A260F6");
+
     private static final List<String> AWS_IDS = List.of(
-            "MEAMJ000", "MEMWY000", "A0A28304", "A0A27380",
-            "MEMWK000", "A0A27D52", "A0A25BBE", "MERES000"
+            "MEAMJ000",
+            "MEMWY000",
+            "A0A28304",
+            "MERES000",
+            "A0A25BBE",
+            "A0A27380",
+            "MEMWK000",
+            "A0A27D52"
     );
+
     private static final List<String> ARG_IDS = List.of(
-            "55E438E2", "55C18D42", "55E41E0E", "MELAN000",
-            "MEUMT000", "MEMWR000", "55E440A0", "MENEV000",
-            "55E453D6", "55E44E72"
+            "55E438E2",
+            "55C18D42",
+            "55E41E0E",
+            "55E44E72",
+            "MELAN000",
+            "MEUMT000",
+            "MEMWR000",
+            "55E440A0",
+            "MENEV000",
+            "55E453D6"
     );
 
     public AwsDataService(AwsDataApiClient apiClient) {
@@ -35,9 +53,10 @@ public class AwsDataService {
         List<ImdAwsDataResponse> argList = new ArrayList<>();
 
         for (ImdAwsDataResponse data : allData) {
-            if (data == null || data.id() == null) continue;
+            if (data == null || data.id() == null) {
+                continue;
+            }
             String id = data.id();
-            
             if (ORG_IDS.contains(id)) {
                 orgList.add(data);
             } else if (AWS_IDS.contains(id)) {
@@ -45,7 +64,6 @@ public class AwsDataService {
             } else if (ARG_IDS.contains(id)) {
                 argList.add(data);
             } else {
-                // Default to ARG if unknown
                 argList.add(data);
             }
         }

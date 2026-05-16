@@ -39,7 +39,7 @@ public record ImdApiProperties(
         }
         if (awsData == null) {
             awsData = new AwsData(
-                    "https://api.imd.gov.in/api/v1/aws_data",
+                    "https://city.imd.gov.in/api/aws_data_api.php",
                     false,
                     AwsData.DEFAULT_STATION_IDS
             );
@@ -73,11 +73,31 @@ public record ImdApiProperties(
             @NotEmpty List<String> stationIds
     ) {
 
+        /** Meghalaya stations (city IMD aws_data_api.php). Order: ORG, then AWS, then ARG. */
         public static final List<String> DEFAULT_STATION_IDS = List.of(
-                "A0A2556C", "A0A260F6",
-                "MEAMJ000", "MEMWY000", "A0A28304", "A0A27380", "MEMWK000", "A0A27D52", "A0A25BBE", "MERES000",
-                "55E438E2", "55C18D42", "55E41E0E", "MELAN000", "MEUMT000", "MEMWR000", "55E440A0", "MENEV000",
-                "55E453D6", "55E44E72"
+                // ORG — ordinary rain gauge (IWS table 1)
+                "A0A2556C",
+                "A0A260F6",
+                // AWS — automatic weather stations (table 2, blue)
+                "MEAMJ000",
+                "MEMWY000",
+                "A0A28304",
+                "MERES000",
+                "A0A25BBE",
+                "A0A27380",
+                "MEMWK000",
+                "A0A27D52",
+                // ARG — automatic rain gauge (table 2, green)
+                "55E438E2",
+                "55C18D42",
+                "55E41E0E",
+                "55E44E72",
+                "MELAN000",
+                "MEUMT000",
+                "MEMWR000",
+                "55E440A0",
+                "MENEV000",
+                "55E453D6"
         );
 
         public AwsData {
