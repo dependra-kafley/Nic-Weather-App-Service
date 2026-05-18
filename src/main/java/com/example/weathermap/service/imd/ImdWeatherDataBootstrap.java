@@ -46,12 +46,14 @@ public class ImdWeatherDataBootstrap {
         );
 
         weatherRefreshExecutor.execute(() -> {
-            log.info("Background refresh: fetching all weather APIs and updating H2");
+            log.info(
+                    "Non-blocking startup refresh started (app is already serving; see ./logs/nic-weather-app.log for IMD_CALL_* audit lines)"
+            );
             try {
                 refreshService.refreshAllFromImd();
-                log.info("Background refresh completed");
+                log.info("Non-blocking startup refresh completed — all API groups attempted");
             } catch (Exception ex) {
-                log.error("Background weather API refresh failed: {}", ex.getMessage(), ex);
+                log.error("Unexpected error during startup refresh: {}", ex.getMessage(), ex);
             }
         });
     }

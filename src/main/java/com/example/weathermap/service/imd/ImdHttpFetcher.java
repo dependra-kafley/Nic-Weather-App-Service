@@ -17,10 +17,12 @@ public class ImdHttpFetcher {
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
+    private final ImdApiCallAudit apiCallAudit;
 
-    public ImdHttpFetcher(RestClient restClient, ObjectMapper objectMapper) {
+    public ImdHttpFetcher(RestClient restClient, ObjectMapper objectMapper, ImdApiCallAudit apiCallAudit) {
         this.restClient = restClient;
         this.objectMapper = objectMapper;
+        this.apiCallAudit = apiCallAudit;
     }
 
     public <T> Optional<T> fetch(
@@ -31,6 +33,7 @@ public class ImdHttpFetcher {
             Class<T> type
     ) {
         String url = baseUrl + "?" + queryParamName + "=" + queryParamValue;
+        apiCallAudit.callStarted(apiName, queryParamValue, false);
         log.info("[{}] Request GET {}", apiName, url);
         try {
             String body = restClient.get()
@@ -39,6 +42,7 @@ public class ImdHttpFetcher {
                     .body(String.class);
             if (body == null || body.isBlank()) {
                 log.warn("[{}] Empty response for {}", apiName, url);
+                apiCallAudit.callFailed(apiName, queryParamValue, false, "empty response body");
                 return Optional.empty();
             }
             log.info("[{}] Response JSON: {}", apiName, truncateForLog(body));
@@ -46,16 +50,20 @@ public class ImdHttpFetcher {
             if (root.isArray()) {
                 if (root.isEmpty()) {
                     log.warn("[{}] Empty JSON array for {}", apiName, url);
+                    apiCallAudit.callFailed(apiName, queryParamValue, false, "empty JSON array");
                     return Optional.empty();
                 }
                 root = root.get(0);
             }
+            apiCallAudit.callSucceeded(apiName, queryParamValue, false);
             return Optional.of(objectMapper.treeToValue(root, type));
         } catch (RestClientException e) {
             log.error("[{}] HTTP error for {} — {}", apiName, url, e.getMessage(), e);
+            apiCallAudit.callFailed(apiName, queryParamValue, false, "HTTP: " + e.getMessage());
             return Optional.empty();
         } catch (Exception e) {
             log.error("[{}] Parse error for {} — {}", apiName, url, e.getMessage(), e);
+            apiCallAudit.callFailed(apiName, queryParamValue, false, "parse: " + e.getMessage());
             return Optional.empty();
         }
     }

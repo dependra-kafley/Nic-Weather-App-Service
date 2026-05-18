@@ -101,4 +101,26 @@ public class ImdWeatherDataCache {
                 : new ImdAwsDataGroupedResponse(List.of(), List.of(), List.of());
         this.dailyRefreshedAt = Instant.now();
     }
+
+    public void updateRainfall(List<RainfallMapPointResponse> data) {
+        this.rainfallMap = List.copyOf(data);
+        this.dailyRefreshedAt = Instant.now();
+    }
+
+    public void updateDistrictWarnings(List<DistrictWarningMapPointResponse> data) {
+        this.districtWarningMap = List.copyOf(data);
+        this.dailyRefreshedAt = Instant.now();
+    }
+
+    public void updateCityWeather(List<CityWeatherPanelItemDto> data) {
+        this.cityWeatherPanels = List.copyOf(data);
+        this.dailyRefreshedAt = Instant.now();
+    }
+
+    public void updateAwsData(ImdAwsDataGroupedResponse data) {
+        this.awsData = data != null
+                ? data
+                : new ImdAwsDataGroupedResponse(List.of(), List.of(), List.of());
+        this.dailyRefreshedAt = Instant.now();
+    }
 }

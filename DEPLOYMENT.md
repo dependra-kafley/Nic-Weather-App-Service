@@ -218,6 +218,26 @@ Schema changes are applied automatically (`spring.jpa.hibernate.ddl-auto: update
 
 ---
 
+## Logs (local profile)
+
+When `SPRING_PROFILES_ACTIVE=local` (default), logs are written to:
+
+| File | Purpose |
+|------|---------|
+| `./logs/nic-weather-app.log` | Full application log (rolling daily) |
+| Console | Same output in the terminal / IDE |
+
+Search the log file for audit lines:
+
+- `IMD_REFRESH_START` / `IMD_REFRESH_END` — which data group was refreshed (nowcast, rainfall, city, etc.)
+- `IMD_CALL_START` / `IMD_CALL_OK` / `IMD_CALL_FAIL` — each API and id (`mock=true` = embedded data, `mock=false` = live HTTP)
+
+Override path: `LOG_FILE=C:\logs\weather.log` or `logging.file.name` in `application-local.yml`.
+
+Startup refresh runs **in the background** (non-blocking); the app serves immediately from H2 while APIs run on a worker thread.
+
+---
+
 ## Troubleshooting
 
 | Symptom | Likely cause | Action |

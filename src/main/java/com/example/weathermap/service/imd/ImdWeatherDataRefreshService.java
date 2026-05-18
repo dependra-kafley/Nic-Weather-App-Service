@@ -27,6 +27,7 @@ public class ImdWeatherDataRefreshService {
     private final AwsDataService awsDataService;
     private final ImdWeatherDataCache cache;
     private final WeatherSnapshotStore snapshotStore;
+    private final ImdApiCallAudit apiCallAudit;
 
     public ImdWeatherDataRefreshService(
             NowcastMapService nowcastMapService,
@@ -35,7 +36,8 @@ public class ImdWeatherDataRefreshService {
             CityWeatherPanelService cityWeatherPanelService,
             AwsDataService awsDataService,
             ImdWeatherDataCache cache,
-            WeatherSnapshotStore snapshotStore
+            WeatherSnapshotStore snapshotStore,
+            ImdApiCallAudit apiCallAudit
     ) {
         this.nowcastMapService = nowcastMapService;
         this.rainfallMapService = rainfallMapService;
@@ -44,40 +46,86 @@ public class ImdWeatherDataRefreshService {
         this.awsDataService = awsDataService;
         this.cache = cache;
         this.snapshotStore = snapshotStore;
+        this.apiCallAudit = apiCallAudit;
     }
 
     public void refreshNowcastFromImd() {
+        apiCallAudit.refreshStarted("nowcast");
+        runIsolated("nowcast", this::refreshNowcastFromImdInternal);
+    }
+
+    public void refreshDailyFromImd() {
+        apiCallAudit.refreshStarted("daily");
+        runIsolated("rainfall", this::refreshRainfallFromImd);
+        runIsolated("district-warning", this::refreshDistrictWarningsFromImd);
+        runIsolated("city-weather", this::refreshCityWeatherFromImd);
+        runIsolated("aws-data", this::refreshAwsDataFromImd);
+        apiCallAudit.refreshFinished("daily", "COMPLETE", "see per-api IMD_REFRESH_END lines");
+    }
+
+    public void refreshAllFromImd() {
+        apiCallAudit.refreshStarted("full");
+        runIsolated("nowcast", this::refreshNowcastFromImdInternal);
+        runIsolated("rainfall", this::refreshRainfallFromImd);
+        runIsolated("district-warning", this::refreshDistrictWarningsFromImd);
+        runIsolated("city-weather", this::refreshCityWeatherFromImd);
+        runIsolated("aws-data", this::refreshAwsDataFromImd);
+        apiCallAudit.refreshFinished("full", "COMPLETE", "all API groups attempted");
+    }
+
+    private void refreshNowcastFromImdInternal() {
         log.info("Refreshing IMD district nowcast data");
         List<NowcastMapPointResponse> data = nowcastMapService.fetchNowcastPointsFromImd();
         cache.updateNowcast(data);
         snapshotStore.saveNowcast(data);
         log.info("Nowcast cache and H2 snapshot updated: {} districts", data.size());
+        apiCallAudit.refreshFinished("nowcast", "OK", data.size() + " districts");
     }
 
-    public void refreshDailyFromImd() {
-        log.info("Refreshing IMD daily data (rainfall, district warning, city weather, AWS)");
-        List<RainfallMapPointResponse> rainfall = rainfallMapService.fetchRainfallPointsFromImd();
-        List<DistrictWarningMapPointResponse> warnings = districtWarningMapService.fetchWarningPointsFromImd();
-        List<CityWeatherPanelItemDto> cities = cityWeatherPanelService.fetchCityPanelsFromImd();
-        ImdAwsDataGroupedResponse aws = awsDataService.fetchGroupedAwsDataFromImd();
-
-        cache.updateDaily(rainfall, warnings, cities, aws);
-        snapshotStore.saveRainfall(rainfall);
-        snapshotStore.saveWarning(warnings);
-        snapshotStore.saveCityWeather(cities);
-        snapshotStore.saveAwsData(aws);
-
-        log.info(
-                "Daily cache and H2 snapshots updated: rainfall={}, warnings={}, cities={}, aws stations={}",
-                rainfall.size(),
-                warnings.size(),
-                cities.size(),
-                aws.aws().size() + aws.org().size() + aws.arg().size()
-        );
+    private void refreshRainfallFromImd() {
+        log.info("Refreshing IMD district rainfall data");
+        List<RainfallMapPointResponse> data = rainfallMapService.fetchRainfallPointsFromImd();
+        cache.updateRainfall(data);
+        snapshotStore.saveRainfall(data);
+        log.info("Rainfall cache and H2 snapshot updated: {} districts", data.size());
+        apiCallAudit.refreshFinished("rainfall", data.isEmpty() ? "EMPTY" : "OK", data.size() + " districts");
     }
 
-    public void refreshAllFromImd() {
-        refreshNowcastFromImd();
-        refreshDailyFromImd();
+    private void refreshDistrictWarningsFromImd() {
+        log.info("Refreshing IMD district warning data");
+        List<DistrictWarningMapPointResponse> data = districtWarningMapService.fetchWarningPointsFromImd();
+        cache.updateDistrictWarnings(data);
+        snapshotStore.saveWarning(data);
+        log.info("Warning cache and H2 snapshot updated: {} districts", data.size());
+        apiCallAudit.refreshFinished("district-warning", data.isEmpty() ? "EMPTY" : "OK", data.size() + " districts");
     }
+
+    private void refreshCityWeatherFromImd() {
+        log.info("Refreshing IMD city weather data");
+        List<CityWeatherPanelItemDto> data = cityWeatherPanelService.fetchCityPanelsFromImd();
+        cache.updateCityWeather(data);
+        snapshotStore.saveCityWeather(data);
+        log.info("City weather cache and H2 snapshot updated: {} stations", data.size());
+        apiCallAudit.refreshFinished("city-weather", data.isEmpty() ? "EMPTY" : "OK", data.size() + " stations");
+    }
+
+    private void refreshAwsDataFromImd() {
+        log.info("Refreshing IMD AWS/ARG station data");
+        ImdAwsDataGroupedResponse data = awsDataService.fetchGroupedAwsDataFromImd();
+        cache.updateAwsData(data);
+        snapshotStore.saveAwsData(data);
+        int count = data.org().size() + data.aws().size() + data.arg().size();
+        log.info("AWS cache and H2 snapshot updated: {} stations", count);
+        apiCallAudit.refreshFinished("aws-data", count == 0 ? "EMPTY" : "OK", count + " stations");
+    }
+
+    private void runIsolated(String apiGroup, Runnable action) {
+        try {
+            action.run();
+        } catch (Exception ex) {
+            log.error("[{}] Refresh failed (other APIs continue): {}", apiGroup, ex.getMessage(), ex);
+            apiCallAudit.refreshFinished(apiGroup, "FAIL", ex.getMessage());
+        }
+    }
+
 }

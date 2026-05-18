@@ -26,6 +26,8 @@ mvn spring-boot:run
 
 Open http://localhost:8080
 
+**Logs (local profile):** `./logs/nic-weather-app.log` — includes every IMD API call (`IMD_CALL_*`) and refresh summary (`IMD_REFRESH_*`). Daily archives: `nic-weather-app.log.yyyy-MM-dd.gz`.
+
 Live IMD APIs:
 
 ```bash
