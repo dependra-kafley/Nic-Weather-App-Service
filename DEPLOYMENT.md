@@ -86,6 +86,7 @@ Always set `SPRING_PROFILES_ACTIVE=prod` in production.
 |----------|---------|-------------|
 | `SPRING_PROFILES_ACTIVE` | `local` | Set to **`prod`** for deployment |
 | `SERVER_PORT` | `8080` | HTTP port |
+| `SERVER_SERVLET_CONTEXT_PATH` | `/weather` in **`prod`** only; empty in `local` | Must match the public URL prefix (e.g. `/weather`) |
 | `WEATHER_DB_PATH` | `./data/weather-db` | H2 file path **without** `.mv.db` suffix |
 | `IMD_CONNECT_TIMEOUT` | `15s` | IMD HTTP connect timeout |
 | `IMD_READ_TIMEOUT` | `45s` | IMD HTTP read timeout |
@@ -163,17 +164,21 @@ Set environment variables `SPRING_PROFILES_ACTIVE=prod` and `WEATHER_DB_PATH` in
 
 ---
 
-## Reverse proxy (optional)
+## Reverse proxy (required when mounted at `/weather`)
+
+The relief portal serves this app at **`https://<host>/weather/`**, not at the site root. With the **`prod`** profile, Spring Boot uses servlet context path **`/weather`** by default (`SERVER_SERVLET_CONTEXT_PATH`).
+
+All HTML, CSS, JS, SVG, and JSON API URLs are generated under `/weather/…`. If static assets were requested from `/css/…` or `/api/…` at the domain root, the portal would redirect them to the login page and the dashboard would stay on “Loading…”.
 
 Example **nginx** in front of the app:
 
 ```nginx
 server {
-    listen 80;
-    server_name weather.example.gov.in;
+    listen 443 ssl;
+    server_name relief.megrevenuedm.gov.in;
 
-    location / {
-        proxy_pass http://127.0.0.1:8080;
+    location /weather/ {
+        proxy_pass http://127.0.0.1:8080/weather/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -183,7 +188,18 @@ server {
 }
 ```
 
+| Check after deploy | Expected URL |
+|--------------------|--------------|
+| Dashboard | `https://<host>/weather/` |
+| Stylesheet | `https://<host>/weather/css/style.css` |
+| Map API | `https://<host>/weather/api/weather/nowcast/map` |
+| Health | `https://<host>/weather/actuator/health` |
+
+Override context path if needed: `SERVER_SERVLET_CONTEXT_PATH=/weather` (must match the proxy path prefix).
+
 Terminate TLS at nginx or a load balancer. The app does not require HTTPS for itself when behind a proxy.
+
+**Portal note:** If the main site redirects unauthenticated requests to `http://…/login`, ensure that redirect uses **HTTPS** as well; otherwise browsers block those responses as mixed content on HTTPS pages.
 
 ---
 

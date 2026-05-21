@@ -1,3 +1,9 @@
+server:
+  servlet:
+    # Served at https://<host>/weather/ behind the relief portal reverse proxy.
+    context-path: ${SERVER_SERVLET_CONTEXT_PATH:/weather}
+  forward-headers-strategy: framework
+
 spring:
   thymeleaf:
     cache: true

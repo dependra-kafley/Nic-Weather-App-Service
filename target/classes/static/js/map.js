@@ -347,7 +347,7 @@ const indexByDistrictKey = (payload) => payload.reduce((acc, row) => {
 
 const loadSyncStatus = async () => {
     try {
-        const response = await fetch("/api/weather/sync-status");
+        const response = await fetch(weatherAppUrl("/api/weather/sync-status"));
         if (!response.ok) {
             return;
         }
@@ -364,7 +364,7 @@ const loadSyncStatus = async () => {
 
 const loadNowcastMapData = async () => {
     try {
-        const response = await fetch("/api/weather/nowcast/map");
+        const response = await fetch(weatherAppUrl("/api/weather/nowcast/map"));
         nowcastBySlug = response.ok ? indexByDistrictKey(await response.json()) : {};
     } catch {
         nowcastBySlug = {};
@@ -373,7 +373,7 @@ const loadNowcastMapData = async () => {
 
 const loadRainfallMapData = async () => {
     try {
-        const response = await fetch("/api/weather/rainfall/map");
+        const response = await fetch(weatherAppUrl("/api/weather/rainfall/map"));
         rainfallBySlug = response.ok ? indexByDistrictKey(await response.json()) : {};
     } catch {
         rainfallBySlug = {};
@@ -382,7 +382,7 @@ const loadRainfallMapData = async () => {
 
 const loadWarningMapData = async () => {
     try {
-        const response = await fetch("/api/weather/district-warning/map");
+        const response = await fetch(weatherAppUrl("/api/weather/district-warning/map"));
         warningBySlug = response.ok ? indexByDistrictKey(await response.json()) : {};
     } catch {
         warningBySlug = {};
@@ -433,7 +433,7 @@ const wireMapHover = () => {
 };
 
 const injectInlineSvg = async () => {
-    const response = await fetch("/meghalaya_districts.svg");
+    const response = await fetch(weatherAppUrl("/meghalaya_districts.svg"));
     const svgMarkup = await response.text();
     const parser = new DOMParser();
     const svgDoc = parser.parseFromString(svgMarkup, "image/svg+xml");
