@@ -1,9 +1,9 @@
 spring:
   application:
     name: nic-weather-app-service
-  # Default to "local" for mock IMD data; set SPRING_PROFILES_ACTIVE=prod for live APIs.
+  # Overridden by application.properties (Maven build). Runtime override: SPRING_PROFILES_ACTIVE.
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local}
+    active: ${SPRING_PROFILES_ACTIVE:prod}
     group:
       mock:
         - local
@@ -28,7 +28,7 @@ spring:
           time_zone: UTC
 
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${SERVER_PORT:8081}
   compression:
     enabled: true
     mime-types: text/html,text/css,application/javascript,application/json,image/svg+xml

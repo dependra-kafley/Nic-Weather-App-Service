@@ -24,6 +24,8 @@ Default profile is **`local`** (mock IMD data, no internet required):
 mvn spring-boot:run
 ```
 
+Or run `WeatherMapApplication` from your IDE (Maven **local** profile must be active — reimport Maven after clone).
+
 Open http://localhost:8080
 
 **Logs (local profile):** `./logs/nic-weather-app.log` — includes every IMD API call (`IMD_CALL_*`) and refresh summary (`IMD_REFRESH_*`). Daily archives: `nic-weather-app.log.yyyy-MM-dd.gz`.
@@ -36,7 +38,7 @@ mvn spring-boot:run -Dspring-boot.run.profiles=prod
 
 ## Deployment
 
-**See [DEPLOYMENT.md](DEPLOYMENT.md)** for production build steps, environment variables, systemd/Windows service examples, H2 backup, reverse proxy, and troubleshooting.
+**See [DEPLOYMENT.md](DEPLOYMENT.md)** for production WAR build (`mvn -Pprod package` → `target/weather.war`), Tomcat deploy, H2 backup, reverse proxy, and troubleshooting.
 
 Minimal production run:
 

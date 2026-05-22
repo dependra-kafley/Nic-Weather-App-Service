@@ -99,7 +99,7 @@
             return;
         }
         try {
-            const response = await fetch(weatherAppUrl("/api/weather/aws-observations"));
+            const response = await fetch("api/weather/aws-observations");
             if (!response.ok) {
                 root.innerHTML = `<p class="text-danger mb-0">Could not load observations (${response.status}).</p>`;
                 return;

@@ -1,7 +1,7 @@
 server:
   servlet:
     # Served at https://<host>/weather/ behind the relief portal reverse proxy.
-    context-path: ${SERVER_SERVLET_CONTEXT_PATH:/weather}
+    context-path: ${SERVER_SERVLET_CONTEXT_PATH:}
   forward-headers-strategy: framework
 
 spring:
@@ -10,6 +10,9 @@ spring:
   h2:
     console:
       enabled: false
+  datasource:
+    # Stored under Tomcat (catalina.base) when WEATHER_DB_PATH is not set — no Tomcat env config required.
+    url: jdbc:h2:file:${WEATHER_DB_PATH:${catalina.base:./data}/weather-data/weather-db};DB_CLOSE_ON_EXIT=FALSE;AUTO_RECONNECT=TRUE
 
 weather:
   imd:

@@ -9,63 +9,127 @@ This document describes how to build, configure, and run **Nic-Weather-App-Servi
 | Requirement | Notes |
 |-------------|--------|
 | **JDK 17** | Required at build and runtime |
-| **Maven 3.9+** | To build the JAR (or use a pre-built artifact from CI) |
+| **Maven 3.9+** | To build the WAR (or use a pre-built artifact from CI) |
+| **Tomcat 10.1+** (WAR deploy) | Servlet 6 / Jakarta EE 9 — required for Spring Boot 3 |
 | **Outbound HTTPS** | Hosts must reach `mausam.imd.gov.in` and `city.imd.gov.in` when using the `prod` profile |
 | **Disk** | Writable directory for H2 files (default `./data/`) |
 | **Time zone** | Server clock should be correct; schedulers use the JVM default time zone (typically set the OS to `Asia/Kolkata` for 9 AM daily jobs) |
 
 ---
 
-## Quick production deploy
+## Quick production deploy (WAR on Tomcat)
 
-### 1. Build
+### 1. Build (prod baked into the WAR)
 
 ```bash
 cd Nic-Weather-App-Service
-mvn -q -DskipTests package
+mvn -q -Pprod -DskipTests clean package
 ```
 
-Artifact: `target/nic-weather-app-service-0.0.1-SNAPSHOT.jar`
+Use **`-Pprod`** so the WAR ships with the **`prod`** Spring profile (live IMD APIs, Thymeleaf cache, no H2 console). You do **not** need `SPRING_PROFILES_ACTIVE` on Tomcat.
+
+| Maven profile | Command | Use |
+|---------------|---------|-----|
+| **`prod`** | `mvn -Pprod package` | **Production WAR** → `target/weather.war` |
+| **`local`** (default) | `mvn package` or `mvn spring-boot:run` | Dev / mock IMD data |
+
+Artifact: **`target/weather.war`**
 
 ### 2. Prepare data directory
 
-```bash
-mkdir -p data
-```
-
-H2 creates `weather-db.mv.db` (and related files) under this path. **Back up `data/`** before upgrades or server moves.
-
-### 3. Run with the `prod` profile
-
-**Linux / macOS:**
+On the server (writable by the Tomcat user), e.g. `/var/lib/nic-weather/`:
 
 ```bash
-export SPRING_PROFILES_ACTIVE=prod
-export WEATHER_DB_PATH=./data/weather-db
-export SERVER_PORT=8080
-
-java -jar target/nic-weather-app-service-0.0.1-SNAPSHOT.jar
+mkdir -p /var/lib/nic-weather/data
 ```
 
-**Windows (PowerShell):**
+H2 creates `weather-db.mv.db` under the path you set in `WEATHER_DB_PATH`. **Back up that directory** before upgrades.
 
-```powershell
-$env:SPRING_PROFILES_ACTIVE = "prod"
-$env:WEATHER_DB_PATH = ".\data\weather-db"
-$env:SERVER_PORT = "8080"
+### 3. Deploy to Tomcat
 
-java -jar target\nic-weather-app-service-0.0.1-SNAPSHOT.jar
-```
+1. Copy `target/weather.war` to Tomcat’s `webapps/` folder (the WAR name **`weather`** gives context path **`/weather`**).
+2. **No Tomcat env vars required** if you built with **`-Pprod`**:
+   - Spring profile **`prod`** is inside the WAR (`application.properties`).
+   - H2 database defaults to **`${catalina.base}/weather-data/weather-db`** (under your Tomcat install). Ensure the Tomcat user can write there.
+3. Start or restart Tomcat.
+
+Optional overrides (only if needed): `WEATHER_DB_PATH`, `SPRING_PROFILES_ACTIVE`, `SERVER_SERVLET_CONTEXT_PATH`.
+
+**Do not** set `SERVER_SERVLET_CONTEXT_PATH=/weather` when using `weather.war` on Tomcat — the context path already comes from the WAR file name.
 
 ### 4. Verify
 
-| Check | URL / action |
-|-------|----------------|
-| Dashboard | `http://<host>:8080/` |
-| Health | `http://<host>:8080/actuator/health` |
-| Sync status | `http://<host>:8080/api/weather/sync-status` |
+| Check | URL (Tomcat on port 8080) |
+|-------|---------------------------|
+| Dashboard | `http://<host>:8080/weather/` |
+| Health | `http://<host>:8080/weather/actuator/health` |
+| Sync status | `http://<host>:8080/weather/api/weather/sync-status` |
+
+Behind HTTPS at `https://relief.megrevenuedm.gov.in/weather/`, the reverse proxy should forward to Tomcat’s `/weather/` context.
 
 On first start the app loads any existing H2 snapshots, then refreshes all IMD APIs in the background. Allow 1–2 minutes before expecting a full map.
+
+### Optional: run prod WAR locally without Tomcat
+
+```bash
+mvn -q -Pprod -DskipTests package
+java -jar target/weather.war
+```
+
+Opens at `http://localhost:8080/` (no `/weather` prefix unless you set `SERVER_SERVLET_CONTEXT_PATH`). H2 uses `./data/weather-data/` when `catalina.base` is unset.
+
+---
+
+## Deploying alongside an existing Tomcat application
+
+Tomcat runs **multiple WARs on the same instance**. Your existing app and this weather app can coexist without a second Tomcat install.
+
+| Existing app | Weather app |
+|--------------|-------------|
+| e.g. `relief.war` → `https://host/relief/` | `weather.war` → `https://host/weather/` |
+| Keeps its own URLs and data | Separate context; does not replace the other WAR |
+
+### Steps
+
+1. **Build** `target/weather.war` (do not rename the main portal WAR).
+2. **Copy** only `weather.war` into the same Tomcat `webapps/` directory where your other WAR already lives.
+3. **Avoid context path clash** — do not deploy a second WAR also named `weather.war`, and do not use `SERVER_SERVLET_CONTEXT_PATH` on Tomcat unless you know you need it.
+4. **Build with `-Pprod`** and copy `weather.war` — no `SPRING_PROFILES_ACTIVE` on Tomcat. H2 files go under `<tomcat>/weather-data/` by default (separate from other apps).
+
+5. **Restart Tomcat** (or use Tomcat Manager to deploy `weather.war` without touching the running app’s files if your process allows hot deploy).
+
+### Reverse proxy (relief portal)
+
+Route by path on the **same host**:
+
+```nginx
+# Existing main app (example)
+location / {
+    proxy_pass http://127.0.0.1:8080/relief/;   # adjust to your existing context
+}
+
+# Weather dashboard
+location /weather/ {
+    proxy_pass http://127.0.0.1:8080/weather/;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+Both locations can point to the **same Tomcat port** (e.g. 8080); only the path prefix differs.
+
+### Checks after deploy
+
+| App | Example URL |
+|-----|-------------|
+| Existing | unchanged (e.g. `https://relief.megrevenuedm.gov.in/`) |
+| Weather | `https://relief.megrevenuedm.gov.in/weather/` |
+
+In Tomcat Manager or `webapps/`, you should see **two** deployed contexts (e.g. `/relief` and `/weather`).
+
+### Requirements
+
+- **Tomcat 10.1+** for this WAR (Spring Boot 3). If the existing app is older (Tomcat 9 / `javax.*`), you may need Tomcat 10 for weather while keeping the other app compatible, or run weather on a separate Tomcat port — confirm with your infra team.
+- **Memory** — adding a Spring Boot app increases heap use; consider raising Tomcat `CATALINA_OPTS` (e.g. `-Xmx512m` or higher).
 
 ---
 
@@ -86,7 +150,7 @@ Always set `SPRING_PROFILES_ACTIVE=prod` in production.
 |----------|---------|-------------|
 | `SPRING_PROFILES_ACTIVE` | `local` | Set to **`prod`** for deployment |
 | `SERVER_PORT` | `8080` | HTTP port |
-| `SERVER_SERVLET_CONTEXT_PATH` | `/weather` in **`prod`** only; empty in `local` | Must match the public URL prefix (e.g. `/weather`) |
+| `SERVER_SERVLET_CONTEXT_PATH` | empty in **`prod`** (default) | Only needed when **not** using `weather.war` on Tomcat (e.g. `java -jar` at `/weather`) |
 | `WEATHER_DB_PATH` | `./data/weather-db` | H2 file path **without** `.mv.db` suffix |
 | `IMD_CONNECT_TIMEOUT` | `15s` | IMD HTTP connect timeout |
 | `IMD_READ_TIMEOUT` | `45s` | IMD HTTP read timeout |
@@ -119,9 +183,11 @@ Configured IDs are in `src/main/resources/application.yml` (11 district `obj_id`
 
 ## Running as a service
 
-### Linux (systemd)
+**Recommended:** deploy `weather.war` on Tomcat and manage Tomcat with systemd.
 
-Create `/etc/systemd/system/nic-weather.service`:
+### Linux (systemd) — standalone WAR (optional)
+
+If you do not use Tomcat, you can run the executable WAR directly:
 
 ```ini
 [Unit]
@@ -135,7 +201,7 @@ WorkingDirectory=/opt/nic-weather
 Environment=SPRING_PROFILES_ACTIVE=prod
 Environment=WEATHER_DB_PATH=/var/lib/nic-weather/weather-db
 Environment=SERVER_PORT=8080
-ExecStart=/usr/bin/java -jar /opt/nic-weather/nic-weather-app-service-0.0.1-SNAPSHOT.jar
+ExecStart=/usr/bin/java -jar /opt/nic-weather/weather.war
 Restart=on-failure
 RestartSec=10
 
@@ -143,32 +209,15 @@ RestartSec=10
 WantedBy=multi-user.target
 ```
 
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable nic-weather
-sudo systemctl start nic-weather
-sudo systemctl status nic-weather
-```
-
 Ensure `/var/lib/nic-weather` exists and is owned by `weather`.
-
-### Windows service
-
-Use [WinSW](https://github.com/winsw/winsw) or NSSM to wrap:
-
-```text
-java.exe -jar C:\apps\nic-weather\nic-weather-app-service-0.0.1-SNAPSHOT.jar
-```
-
-Set environment variables `SPRING_PROFILES_ACTIVE=prod` and `WEATHER_DB_PATH` in the service configuration.
 
 ---
 
 ## Reverse proxy (required when mounted at `/weather`)
 
-The relief portal serves this app at **`https://<host>/weather/`**, not at the site root. With the **`prod`** profile, Spring Boot uses servlet context path **`/weather`** by default (`SERVER_SERVLET_CONTEXT_PATH`).
+The relief portal serves this app at **`https://<host>/weather/`**. Deploy **`weather.war`** on Tomcat so the context path is `/weather`, or proxy to that context.
 
-All HTML, CSS, JS, SVG, and JSON API URLs are generated under `/weather/…`. If static assets were requested from `/css/…` or `/api/…` at the domain root, the portal would redirect them to the login page and the dashboard would stay on “Loading…”.
+All HTML, CSS, JS, SVG, and JSON API URLs must be under `/weather/…`. If static assets are requested from `/css/…` or `/api/…` at the domain root, the portal redirects them to login and the dashboard stays on “Loading…”.
 
 Example **nginx** in front of the app:
 

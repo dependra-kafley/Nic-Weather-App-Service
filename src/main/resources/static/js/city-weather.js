@@ -150,7 +150,7 @@ const initCityWeatherAccordion = async () => {
     }
 
     try {
-        const response = await fetch(weatherAppUrl("/api/weather/cities"));
+        const response = await fetch("api/weather/cities");
         if (!response.ok) {
             root.innerHTML = `<p class="small text-danger mb-0 py-2">City weather could not be loaded (${response.status}).</p>`;
             return;
